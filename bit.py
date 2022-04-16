@@ -74,7 +74,7 @@ from IPython import get_ipython
 isColab =  'google.colab' in str(get_ipython())
 if isColab:
     noto_font_dir = 'Noto_JP_fonts'
-    bit_image_dir = '2022muto_figures'
+    bit_image_dir = 'bit/2022muto_figures'
 
     #!mkdir Noto_JP_fonts
 

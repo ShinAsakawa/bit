@@ -70,6 +70,7 @@ import torch
 # Noto Truetype font の読み込み
 # Download NotoSerif and NotoSans fonts from https://fonts.google.com/download?family=Noto%20Serif%20JP
 #_ = ImageFont.truetype(os.path.join('/Users/asakawa/study/data/Noto_JP_fonts','NotoSerifJP-Bold.otf'))
+from IPython import get_ipython
 isColab =  'google.colab' in str(get_ipython())
 if isColab:
     noto_font_dir = 'Noto_JP_fonts'

@@ -73,16 +73,17 @@ import torch
 from IPython import get_ipython
 isColab =  'google.colab' in str(get_ipython())
 if isColab:
+
+    # !mkdir Noto_JP_fonts
+
+    # !wget https://noto-website-2.storage.googleapis.com/pkgs/NotoSerifJP.zip
+    # !wget https://noto-website-2.storage.googleapis.com/pkgs/NotoSansJP.zip
+    # !unzip NotoSerifJP.zip -d Noto_JP_fonts
+    # !unzip -o NotoSansJP.zip -d Noto_JP_fonts  # `-o` means overwrite 
+    # !mv Noto_JP_fonts bit
+
     noto_font_dir = 'bit/Noto_JP_fonts'
     bit_image_dir = 'bit/2022muto_figures'
-
-    !mkdir Noto_JP_fonts
-
-    !wget https://noto-website-2.storage.googleapis.com/pkgs/NotoSerifJP.zip
-    !wget https://noto-website-2.storage.googleapis.com/pkgs/NotoSansJP.zip
-    !unzip NotoSerifJP.zip -d Noto_JP_fonts
-    !unzip -o NotoSansJP.zip -d Noto_JP_fonts  # `-o` means overwrite 
-    !mv Noto_JP_fonts bit
 else:
     noto_font_dir = '/Users/_asakawa/study/data/Noto_JP_fonts/'
     bit_image_dir = '/Users/_asakawa/study/2022muto/figures'

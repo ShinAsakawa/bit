@@ -17,7 +17,7 @@ line_cancellation と star_cancellation は未着手である。
 * **文字抹消課題 letter cancellation** : 紙と鉛筆を使用した検査で，患者は妨害刺激である文字の埋め込まれた画像から指定された標的文字を走査して探し出し，消去することが求められる。
 一枚の刺激図版には 34個 の大文字が 5 列に並んでいる。
 40 個の標的刺激は，ページの両側に同数ずつ配置されている。
-各文字の高さは 6 mmで、2 mmの間隔で配置されています。
+各文字の高さは 6 mm で，2 mm の間隔で配置されています。
 * **星印抹消課題 star cancellation**: 言語および非言語刺激のランダムな配列で構成される。
 52 個の大きな星 (14mm)，ランダムに配置された 13 個の文字，19 個の短い (3-4文字) 単語が，56 個の小さな星 (8mm) の中に散りばめられており，この小さな星印が標的刺激となる。
 患者は小さな星をすべて抹消するように指示される。
@@ -73,18 +73,19 @@ import torch
 from IPython import get_ipython
 isColab =  'google.colab' in str(get_ipython())
 if isColab:
-    noto_font_dir = 'Noto_JP_fonts'
+    noto_font_dir = 'bit/Noto_JP_fonts'
     bit_image_dir = 'bit/2022muto_figures'
 
-    #!mkdir Noto_JP_fonts
+    !mkdir Noto_JP_fonts
 
-    #!wget https://noto-website-2.storage.googleapis.com/pkgs/NotoSerifJP.zip
-    #!wget https://noto-website-2.storage.googleapis.com/pkgs/NotoSansJP.zip
-    #!unzip NotoSerifJP.zip -d Noto_JP_fonts
-    #!unzip -o NotoSansJP.zip -d Noto_JP_fonts  # `-o` means overwrite 
+    !wget https://noto-website-2.storage.googleapis.com/pkgs/NotoSerifJP.zip
+    !wget https://noto-website-2.storage.googleapis.com/pkgs/NotoSansJP.zip
+    !unzip NotoSerifJP.zip -d Noto_JP_fonts
+    !unzip -o NotoSansJP.zip -d Noto_JP_fonts  # `-o` means overwrite 
+    !mv Noto_JP_fonts bit
 else:
-    noto_font_dir = '/Users/asakawa/study/data/Noto_JP_fonts/'
-    bit_image_dir = '/Users/asakawa/study/2022muto/figures'
+    noto_font_dir = '/Users/_asakawa/study/data/Noto_JP_fonts/'
+    bit_image_dir = '/Users/_asakawa/study/2022muto/figures'
 notofonts_fnames = glob(os.path.join(noto_font_dir,'*otf'))
 #print(len(notofonts_fnames))
 notofonts = {fname.split('/')[-1].split('.')[0]:{'fname':fname} for fname in notofonts_fnames}
@@ -181,12 +182,15 @@ class BIT():
         #_width, _height = np.array(np.array([self.tasks[task]['img'].size for task in self.tasks]).mean(axis=0),dtype=int)
         #self.max_width, self.max_height = _width, _height
 
-        self.colornames = list(PIL.ImageColor.colormap)
+        #self.colornames = list(PIL.ImageColor.colormap)
+        self.colornames = ['black', 'blue', 'brown', 'cyan', 'green', 'magenta', 'orange', 'purple', 'red', 'yellow' ] # , 'white']
 
         self.hira_chars = " ".join(ch for ch in 'あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん').split(' ')
         self.star = '★'
         self.line_symbol = '<line>'
-        self.symbols = [self.line_symbol , self.star] + self.hira_chars
+        self.background = '<background>'
+        self.symbols = [self.background, self.line_symbol , self.star] + self.hira_chars
+
 
 
         # DETR のサンプルプログラムを借用
@@ -387,7 +391,8 @@ class BIT():
                   fontsize:int= 128,
                   img:PIL.Image.Image=None,
                   x:int = -1, y:int = -1, 
-                  fg_color:str='black', bg_color:str='white',
+                  fg_color:str='black', 
+                  bg_color:str='white',
                   width:int=4662, 
                   height:int=3289,
                  )->PIL.Image.Image:
@@ -511,7 +516,7 @@ class BIT():
                                          img:PIL.Image.Image=None,
                                          fontname:str='NotoSansJP-Bold', 
                                          chars_per_line=34,
-					                     fontsize:int=128,
+                                         fontsize:int=128,
                                          n_lines=5,
                                          width:int=4662, 
                                          height:int=3289,
@@ -550,18 +555,22 @@ class BIT():
             fg_color = np.random.choice(self.colornames)
             #print(f'fg_color:{fg_color}')
 
+
+        self.hira_select()
+        target_chars = self.target_hira_chars 
+
         target_line_x = center_x - target_offset
         x = center_x - target_offset
         y = bottom_y
-        ret = self.draw_text(text='星', x=x, y=y, 
-                             fg_color=fg_color, 
-                             img=img, 
-                             fontname=fontname,
-                             )
+        ret = self.draw_text(text=target_chars[0], x=x, y=y, 
+                             fg_color=fg_color, img=img, fontname=fontname)
 
         x += target_offset * 2
         y = bottom_y
-        ret = self.draw_text(text='↑',x=x, y=y, fg_color='red', img=ret) # , font=self.default_font, fontsize=self.default_font_size)
+        ret = self.draw_text(text=target_chars[1],x=x, y=y, 
+                             fg_color='red', 
+                             img=ret, fontname=fontname) # , font=self.default_font, fontsize=self.default_font_size)
+
 
         # 最低行に 矢印記号を描画
         up_arrow = '↑'
@@ -606,6 +615,8 @@ class BIT():
 
         # 文字列のシャッフル
         self.hira_chars = np.random.permutation(self.hira_chars)
+
+        self.hira_chars = [str(c) for c in self.hira_chars]
 
         self.target_hira_chars = self.hira_chars[:n]        # 最初の n 文字をターゲットに設定
         self.distractors_hira_chars =  self.hira_chars[n:]  # 残りの文字を 妨害刺激用文字として設定

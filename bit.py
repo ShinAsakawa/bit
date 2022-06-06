@@ -73,9 +73,7 @@ import torch
 from IPython import get_ipython
 isColab =  'google.colab' in str(get_ipython())
 if isColab:
-
     # !mkdir Noto_JP_fonts
-
     # !wget https://noto-website-2.storage.googleapis.com/pkgs/NotoSerifJP.zip
     # !wget https://noto-website-2.storage.googleapis.com/pkgs/NotoSansJP.zip
     # !unzip NotoSerifJP.zip -d Noto_JP_fonts
@@ -85,8 +83,15 @@ if isColab:
     noto_font_dir = 'bit/Noto_JP_fonts'
     bit_image_dir = 'bit/2022muto_figures'
 else:
-    noto_font_dir = '/Users/_asakawa/study/data/Noto_JP_fonts/'
-    bit_image_dir = '/Users/_asakawa/study/2022muto/figures'
+    import os
+    import platform
+    HOSTNAME = platform.node().split('.')[0]
+    if HOSTNAME == 'Sinope':
+        HOME = '/Users/_asakawa'
+    else:
+        HOME = '/Users/asakawa'
+    noto_font_dir = os.path.join(HOME, 'study/data/Noto_JP_fonts/')
+    bit_image_dir = os.path.join(HOME, '/Users/_asakawa/study/2022muto/figures')
 notofonts_fnames = glob(os.path.join(noto_font_dir,'*otf'))
 #print(len(notofonts_fnames))
 notofonts = {fname.split('/')[-1].split('.')[0]:{'fname':fname} for fname in notofonts_fnames}
@@ -165,6 +170,8 @@ class BIT():
             
         #武藤先生から送っていただいた BIT 日本語版の図版のスキャンデータを読み込む
         #bit_image_dir = '/Users/asakawa/study/2022muto/figures'
+        bit_image_dir = os.path.join(HOME, 'study/2022muto/figures')
+
         bit_image_files = {'line_bisection': '20220124BIT_line_bisection.jpg',
                           'line_erasion': '20220124BIT_line_crossing.jpg',
                           'letter_erasion': '20220124BIT_letter_cancellation.jpg',

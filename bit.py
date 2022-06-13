@@ -170,7 +170,7 @@ class BIT():
             
         #武藤先生から送っていただいた BIT 日本語版の図版のスキャンデータを読み込む
         #bit_image_dir = '/Users/asakawa/study/2022muto/figures'
-        #bit_image_dir = os.path.join(HOME, 'study/2022muto/figures')
+        bit_image_dir = os.path.join(HOME, 'study/2022muto/figures')
 
         bit_image_files = {'line_bisection': '20220124BIT_line_bisection.jpg',
                           'line_erasion': '20220124BIT_line_crossing.jpg',
@@ -640,6 +640,173 @@ class BIT():
         a = np.random.permutation(s_hira)
         return a[:n]
             
+
+import PIL
+import matplotlib.patches as patches
+def plot_pilimg_and_bbox(pil_img:PIL.Image.Image, 
+                         bboxes:list,
+                         verbose:bool=False
+                        ):
+    """bounding box (物体を囲む四角形の境界領域のことを境界領域箱と呼ぶ): bbox
+    PIL 画像を境界領域と共に表示する関数"""
+    plt.figure(figsize=(10,8))
+    plt.imshow(pil_img)
+    ax = plt.gca()
+    for (xmin, ymin, xmax, ymax), c in zip(bboxes, COLORS):
+        if verbose:
+            print(f'xmin:{xmin}, ymin:{ymin}')
+        ax.add_patch(plt.Rectangle((xmin, ymin), xmax - xmin, ymax - ymin,
+                                   fill=False, color=c, linewidth=2))    
+
+def plot_img_bbox(img, target, title=None):
+    # 画像と bbox を描画     # plot the image and bboxes
+    # バウンディングボックスは以下のように定義されます: x-min y-min 幅 高さ
+    fig, ax = plt.subplots(1,1)
+    fig.set_size_inches(7,7)
+    ax.imshow(img)
+    #print(target)
+    
+    for box in target['boxes']:
+        x, y, width, height  = box[0], box[1], box[2]-box[0], box[3]-box[1]
+        rect = patches.Rectangle((x, y),
+                                 width, height,
+                                 linewidth = 4,
+                                 edgecolor = 'red',
+                                 facecolor = 'none')
+
+        ax.add_patch(rect)  # 画像上にバウンディングボックスを描画
+        
+    if title != None:
+        ax.set_title(title)
+    plt.show()
+    
+
+def get_transform():
+    return A.Compose([
+        # ToTensorV2 converts image to pytorch tensor without div by 255
+        ToTensorV2(p=1.0) 
+        ], bbox_params={'format': 'pascal_voc', 'label_fields': ['labels']})
+
+
+import cv2
+import glob
+class BIT_LineBisection(torch.utils.data.Dataset):
+    """留意事項
+    1. データセットはタプルを返す。1 つ目の要素は画像の形状，2 つ目の要素は辞書である。
+    2. 画像はデータセット定義時に指定したサイズでカラーモードは RGB
+    3. 画像には 4 つのバウンディングボックスがあり，これはボックス内の 4 つのリストとラベルの長さから明らかである。
+    """
+    def __init__(self, dirname='data/2022bit_line_bisection/train',
+                 transforms=get_transform,
+                 _symbols=None):
+
+        if _symbols == None:
+            print('Error')
+        else:
+            self.symbols = _symbols
+        
+        self.transforms = transforms
+        self.dirname = dirname
+        self.data_fnames = sorted(glob.glob(os.path.join(dirname,'*.png')))
+        self.n_data = len(self.data_fnames)
+
+        # 武藤先生から送信された画像は 4662 X 3289 なので，この縮尺因子で画像も境界ボックスも規格化する
+        muto_width = 4662
+        muto_height = 3289
+        self.height = 224
+        self.width = 224
+        self.height_f = 224 / muto_height
+        self.width_f =  224 / muto_width
+        #self.height_f *= int(muto_height / muto_width)
+        
+        # 境界領域ボックス (左,上,右,下) 4 点からなるデータを `bboxes.txt` から読み込む
+        bboxes_fname = os.path.join(self.dirname, 'bboxes.txt')
+        with open(bboxes_fname, 'r') as fp:
+            X = fp.readlines()
+        self.bboxes = {}
+        for i, line in enumerate(X):
+            digs = np.array([int(d) for d in line.strip().replace('[','').replace(']','').split(',')])
+            self.bboxes[i] = np.reshape(digs,((-1,4)))
+            
+            for box in self.bboxes[i]:
+                box[0] *= self.width_f
+                box[1] *= self.height_f
+                box[2] *= self.width_f
+                box[3] *= self.height_f
+            
+
+    def __getitem__(self, index):
+        #img = plt.imread(self.data_fnames[index])
+        #img = torch.Tensor(img).permute(2,0,1)
+        
+        # reading the images and converting them to correct size and color    
+        img = cv2.imread(self.data_fnames[index])
+        #img = cv2.imread(image_path)
+        img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB).astype(np.float32)
+        img_res = cv2.resize(img_rgb, (self.width, self.height), cv2.INTER_AREA)
+        # diving by 255
+        img_res /= 255.0
+        img = img_res
+        img = torch.Tensor(img).permute(2,0,1)
+        
+        # convert boxes into a torch.Tensor
+        bboxes = torch.as_tensor(self.bboxes[index], dtype=torch.float32)
+        
+        # getting the areas of the boxes
+        area = (bboxes[:, 3] - bboxes[:, 1]) * (bboxes[:, 2] - bboxes[:, 0])
+        
+         # suppose all instances are not crowd
+        iscrowd = torch.zeros((bboxes.shape[0],), dtype=torch.int64)
+        
+        labels = torch.as_tensor([self.symbols.index('<line>') for _ in range(self.bboxes[index].shape[0])], dtype=torch.int64)
+        #labels = torch.as_tensor([bit.symbols.index('<line>') for _ in range(self.bboxes[index].shape[0])], dtype=torch.int64)
+        #labels = torch.as_tensor([bit.symbols.index('<line>') for _ in range(train_dataset.bboxes[index].shape[0])], dtype=torch.int64)
+
+        target = {}
+        target["boxes"] = bboxes
+        #target["labels"] = labels.unsqueeze(0)
+        target["labels"] = labels
+        target["area"] = area
+        target["iscrowd"] = iscrowd
+
+        # image_id
+        image_id = torch.tensor([index])
+        target["image_id"] = image_id        
+        
+        #transformed = self.transforms(image = img,
+        #                              bboxes = target['boxes'],
+        #                              labels = labels)
+        #img = transformed['image']
+        
+        return img, target
+        #return img, self.bboxes[index]
+        #return self.data_fnames[index], self.bboxes[index]
+
+        
+    def __len__(self):
+        return self.n_data
+
+
+import torchvision
+from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
+from torchvision.models.detection import fasterrcnn_resnet50_fpn
+
+def get_object_detection_model(num_classes):
+
+    # MS-COCO で事前に学習させたモデルを読み込み
+    model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
+    #model = torchvision.models.mobilenet_v2(pretrained=True)
+    
+    # 分類器の入力特徴数の取得
+    in_features = model.roi_heads.box_predictor.cls_score.in_features
+    print(f'変換前 model.roi_heads:{model.roi_heads}')
+
+    # 事前学習済頭部を新しいものに置き換え
+    model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes) 
+    print(f'変換後 model.roi_heads:{model.roi_heads}')
+
+    return model
+
 
 if __name__ == "__main__":
 	bit = BIT()	

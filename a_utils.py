@@ -9,10 +9,10 @@ HOSTNAME = platform.node().split('.')[0]
 import os
 HOME = os.environ['HOME']
 
-try:
-    import ipynbname
-except ImportError:
-    !pip install ipynbname > /dev/null
+#try:
+#    import ipynbname
+#except ImportError:
+#    !pip install ipynbname > /dev/null
 import ipynbname
 FILEPATH = str(ipynbname.path()).replace(HOME+'/','')
 

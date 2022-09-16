@@ -210,7 +210,7 @@ class notoen_dataset(Dataset):
         target_transform=None):
 
         super().__init__()
-        self.chars = chars
+        self.items = items
         self.fonts_dict = fonts_dict
         self.width = width
         self.heigh = height
@@ -228,14 +228,14 @@ class notoen_dataset(Dataset):
                     xy=(x0, y0),
                     text=itm,
                     font=fonts_dict[font], # ['data'],
-                    stroke_width=0,
+                    stroke_width=1,
                     #stroke_fill="black",
                     #spacing=-4,
                     #fill=(0,0,0),
                     fill=color,
                 )
                 imgs.append(np.array(img))
-                labels.append((chars.index(ch),ch))
+                labels.append((items.index(itm),itm))
                 #imgs.append(torch.Tensor(np.array(img).transpose(2,0,1)))
         self.imgs = imgs
         self.labels = labels

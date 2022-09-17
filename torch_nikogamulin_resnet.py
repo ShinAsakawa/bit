@@ -82,6 +82,8 @@ class ResNet(nn.Module):
         assert num_layers in [18, 34, 50, 101, 152], f'ResNet{num_layers}: Unknown architecture! Number of layers has ' \
                                                      f'to be 18, 34, 50, 101, or 152 '
         super(ResNet, self).__init__()
+        self.device=device
+        
         if num_layers < 50:
             self.expansion = 1
         else:
@@ -110,8 +112,7 @@ class ResNet(nn.Module):
                                        layers[0],
                                        intermediate_channels=64,
                                        stride=1,
-                                       device=self.device,
-                                      )
+                                       device=self.device)
         self.layer2 = self.make_layers(num_layers,
                                        block,
                                        layers[1],

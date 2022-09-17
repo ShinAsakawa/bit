@@ -6,11 +6,14 @@ import torch.nn.functional as F
 
 class Block(nn.Module):
     def __init__(self,
-                 num_layers,
-                 in_channels,
-                 out_channels,
+                 num_layers:int,
+                 in_channels:int,
+                 out_channels:int,
                  identity_downsample=None,
-                 stride=1):
+                 stride:int=1,
+                 device:str="cuda" if torch.cuda.is_available() else "cpu",                 
+                ):
+        
         assert num_layers in [18, 34, 50, 101, 152], "should be a a valid architecture"
         super(Block, self).__init__()
         self.num_layers = num_layers
@@ -23,29 +26,29 @@ class Block(nn.Module):
                                out_channels,
                                kernel_size=1,
                                stride=1,
-                               padding=0)
-        self.bn1 = nn.BatchNorm2d(out_channels)
+                               padding=0).to(device=device)
+        self.bn1 = nn.BatchNorm2d(out_channels).to(device=device)
         if self.num_layers > 34:
             self.conv2 = nn.Conv2d(out_channels,
                                    out_channels,
                                    kernel_size=3,
                                    stride=stride,
-                                   padding=1)
+                                   padding=1).to(device=device)
         else:
             # for ResNet18 and 34, connect input directly to (3x3) kernel (skip first (1x1))
             self.conv2 = nn.Conv2d(in_channels,
                                    out_channels,
                                    kernel_size=3,
                                    stride=stride,
-                                   padding=1)
-        self.bn2 = nn.BatchNorm2d(out_channels)
+                                   padding=1).to(device=device)
+        self.bn2 = nn.BatchNorm2d(out_channels).to(device=device)
         self.conv3 = nn.Conv2d(out_channels,
                                out_channels * self.expansion,
                                kernel_size=1,
                                stride=1,
-                               padding=0)
-        self.bn3 = nn.BatchNorm2d(out_channels * self.expansion)
-        self.relu = nn.ReLU()
+                               padding=0).to(device=device)
+        self.bn3 = nn.BatchNorm2d(out_channels * self.expansion).to(device=device)
+        self.relu = nn.ReLU().to(device=device)
         self.identity_downsample = identity_downsample
 
     def forward(self, x):
@@ -70,10 +73,12 @@ class Block(nn.Module):
 
 class ResNet(nn.Module):
     def __init__(self,
-                 num_layers,
-                 block,
-                 image_channels,
-                 num_classes):
+                 num_layers:int,
+                 block:int,
+                 image_channels:int,
+                 num_classes:int,
+                 device:str="cuda" if torch.cuda.is_available() else "cpu",                 
+                ):
         assert num_layers in [18, 34, 50, 101, 152], f'ResNet{num_layers}: Unknown architecture! Number of layers has ' \
                                                      f'to be 18, 34, 50, 101, or 152 '
         super(ResNet, self).__init__()
@@ -94,35 +99,40 @@ class ResNet(nn.Module):
                                64,
                                kernel_size=7,
                                stride=2,
-                               padding=3)
-        self.bn1 = nn.BatchNorm2d(64)
-        self.relu = nn.ReLU()
-        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+                               padding=3).to(device=device)
+        self.bn1 = nn.BatchNorm2d(64).to(device=device)
+        self.relu = nn.ReLU().to(device=device)
+        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1).to(device=device)
 
         # ResNetLayers
         self.layer1 = self.make_layers(num_layers,
                                        block,
                                        layers[0],
                                        intermediate_channels=64,
-                                       stride=1)
+                                       stride=1,
+                                       device=self.device,
+                                      )
         self.layer2 = self.make_layers(num_layers,
                                        block,
                                        layers[1],
                                        intermediate_channels=128,
-                                       stride=2)
+                                       stride=2,
+                                       device=self.device)
         self.layer3 = self.make_layers(num_layers,
                                        block,
                                        layers[2],
                                        intermediate_channels=256,
-                                       stride=2)
+                                       stride=2,
+                                       device=self.device)
         self.layer4 = self.make_layers(num_layers,
                                        block,
                                        layers[3],
                                        intermediate_channels=512,
-                                       stride=2)
+                                       stride=2,
+                                       device=self.device)
 
-        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = nn.Linear(512 * self.expansion, num_classes)
+        self.avgpool = nn.AdaptiveAvgPool2d((1, 1)).to(device)
+        self.fc = nn.Linear(512 * self.expansion, num_classes).to(device)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -145,15 +155,16 @@ class ResNet(nn.Module):
                     block,
                     num_residual_blocks,
                     intermediate_channels,
-                    stride):
+                    stride,
+                    device='cuda' if torch.cuda.is_available() else "cpu"):
         layers = []
 
         identity_downsample = nn.Sequential(
             nn.Conv2d(self.in_channels,
                       intermediate_channels*self.expansion,
                       kernel_size=1,
-                      stride=stride),
-            nn.BatchNorm2d(intermediate_channels*self.expansion))
+                      stride=stride).to(device),
+            nn.BatchNorm2d(intermediate_channels*self.expansion).to(device))
         layers.append(block(num_layers,
                             self.in_channels,
                             intermediate_channels,
@@ -172,15 +183,16 @@ def ResNet18(img_channels=3,
     return ResNet(num_layers=18,
                   block=Block,
                   image_channels=img_channels,
-                  num_classes=num_classes)
-
+                  num_classes=num_classes,
+                  device='cuda' if torch.cuda.is_available() else "cpu")
 
 def ResNet34(img_channels=3,
              num_classes=1000):
     return ResNet(num_layers=34,
                   block=Block,
                   image_channels=img_channels,
-                  num_classes=num_classes)
+                  num_classes=num_classes,
+                  device='cuda' if torch.cuda.is_available() else "cpu")
 
 
 def ResNet50(img_channels=3,
@@ -188,16 +200,23 @@ def ResNet50(img_channels=3,
     return ResNet(num_layers=50,
                   block=Block,
                   image_channels=img_channels,
-                  num_classes=num_classes)
-
+                  num_classes=num_classes,
+                  device='cuda' if torch.cuda.is_available() else "cpu")
 
 def ResNet101(img_channels=3, num_classes=1000):
-    return ResNet(101, Block, img_channels, num_classes)
+    return ResNet(num_layers=101, 
+                  bloc=Block, 
+                  image_channels=img_channels, 
+                  num_classes=num_classes,
+                  device='cuda' if torch.cuda.is_available() else "cpu")
 
 
 def ResNet152(img_channels=3, num_classes=1000):
-    return ResNet(152, Block, img_channels, num_classes)
-
+    return ResNet(num_layers=152, 
+                  block=Block, 
+                  img_channels=img_channels, 
+                  num_classes=num_classes,
+                  device='cuda' if torch.cuda.is_available() else "cpu")
 
 # def test():
 #     net = ResNet18(img_channels=3, num_classes=1000)

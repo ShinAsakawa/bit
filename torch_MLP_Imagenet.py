@@ -5,10 +5,9 @@ class MLP_Imagenet(torch.nn.Module):
     def __init__(self,
                  out_size:int=0,
                  n_hid:int=128,
-                 device='cuda' if torch.cuda_available() else 'cpu'):
+                 device:str="cuda" if torch.cuda.is_available() else "cpu"):
         super().__init__()
         self.n_hid = n_hid
-        
         self.fc1 = torch.nn.Linear(3 * 224 * 224, n_hid).to(device)
         self.fc2 = torch.nn.Linear(n_hid, out_size).to(device)
         self.relu = torch.nn.ReLU().to(device)

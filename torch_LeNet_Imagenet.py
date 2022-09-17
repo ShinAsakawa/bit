@@ -8,28 +8,29 @@ class LeNet_Imagenet(nn.Module):
     """LeNet [@1998LeCun] の実装"""
     def __init__(self,
                  out_size:int=0,
-                 device:str="cuda" if torch.cuda.is_available() else "cpu"): 
-
+                 device:str="cuda" if torch.cuda.is_available() else "cpu",
+                ):
         super().__init__()
 
         # 第一畳み込み層の定義
         self.conv1 = nn.Conv2d(in_channels=3,
                                out_channels=6,
-                               kernel_size=5).to(device)
+                               kernel_size=5,
+                               device=device,
+                              )
 
         # 最大値プーリング層の定義
-        self.pool = nn.MaxPool2d(kernel_size=2,
-                                 stride=2).to(device)
+        self.pool = nn.MaxPool2d(kernel_size=2, stride=2).to(device=device)
 
-        self.conv2 = nn.Conv2d(6, 16, 5).to(device)    # 第二畳み込み層の定義
+        self.conv2 = nn.Conv2d(6, 16, 5).to(device=device) # 第二畳み込み層の定義
 
         # 第一全結合層の定義
         # ImageNet size であれば (((224 - 5 + 1) // 2) - 5 + 1) // 2 = 53
         self.fc1 = nn.Linear(in_features=16 * 53 * 53,
-                             out_features=120).to(device)
+                             out_features=120).to(device=device)
 
-        self.fc2 = nn.Linear(120, 84).to(device)       # 第二全結合層の定義
-        self.fc3 = nn.Linear(84, out_size).to(device)  # 最終層の定義
+        self.fc2 = nn.Linear(120, 84).to(device=device)      # 第二全結合層の定義
+        self.fc3 = nn.Linear(84, out_size).to(device=device) # 最終層の定義
 
     def forward(self, x):
         x = self.pool(F.relu(self.conv1(x)))

@@ -31,7 +31,8 @@ def get_notojp_fonts(
     if not os.path.exists(notofonts_dir):
         os.mkdir(notofonts_dir)
 
-    print('Noto font の読み込み', end='...')
+    if verbose:
+        print('Noto font の読み込み', end='...')
     for url in NOTOfonts_urls:
         zip_fname = url.split('/')[-1]
         if not os.path.exists(zip_fname):  # ファイルが存在しない場合，ダウンロードする
@@ -44,7 +45,8 @@ def get_notojp_fonts(
 
         # zip ファイルの解凍処理
         with zipfile.ZipFile(zip_fname, "r") as zip_fp:
-            print(f'{zip_fname} 解凍中', end="...")
+            if verbose:
+                print(f'{zip_fname} 解凍中', end="...")
             zip_fp.extractall(notofonts_dir)
 
     # 解凍した TrueType フォントのファイル名を取得
@@ -67,13 +69,6 @@ def get_notojp_fonts(
                   f' {v}')
 
     return notofonts
-
-# notofonts = get_noto_fonts(fontsize=default_fontsize)
-# print('\n読み込んだ Noto fonts の情報')
-# for i, (k, v) in enumerate(sorted(notofonts.items())):
-#     print(f'{i:2d}',
-#           colored(f'{k}', "blue", attrs=['bold']),
-#           f' {v}')
 
 
 class notojp_dataset(Dataset):
@@ -145,24 +140,6 @@ class notojp_dataset(Dataset):
         label = self.labels[index]
         return img, label
 
-
-# # 引数を指定しないと数字データとなる
-# _dataset = notojp_dataset(chars=all_chars)
-# print(f'_data.__len__():{_dataset.__len__()}')
-
-# _labels = set([l[1] for l in _dataset.labels])
-# print(f'len(_labels):{len(_labels)}')
-
-# if verbose:
-#     # 全データの中から 1 つサンプリング
-#     N = np.random.choice(_dataset.__len__())
-#     img, label = _dataset.__getitem__(N)
-
-#     # 返ってきたデータは PyTorch.Tensor なので PILImage として表示できるように変換
-#     img = (img.detach().numpy().transpose(1,2,0) / 255).clip(0,1)
-#     plt.figure(figsize=(2,2))
-#     plt.title(f'ラベル:{label}')
-#     plt.imshow(img);plt.show()
 
 
 def get_notoen_fonts(

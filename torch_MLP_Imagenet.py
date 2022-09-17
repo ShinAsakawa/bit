@@ -11,11 +11,13 @@ class MLP_Imagenet(torch.nn.Module):
         
         self.fc1 = torch.nn.Linear(3 * 224 * 224, n_hid)
         self.fc2 = torch.nn.Linear(n_hid, out_size)
+        self.relu = torch.nn.ReLU()
         self.softmax = torch.nn.Softmax(dim=1)
 
     def forward(self, x):
         x = x.view(-1, 3 * 224 * 224)
         x = torch.tanh(self.fc1(x))
+        x = self.relu(x)
         x = torch.tanh(self.fc2(x))
         x = self.softmax(x)
         return x

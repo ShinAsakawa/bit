@@ -24,9 +24,7 @@ def train_model(net:torch.nn.Module=None,
 
             # データローダーからミニバッチを取り出すループ
             for inputs, labels in tqdm(dataloaders_dict[phase]):
-            #for inputs, labels in dataloaders_dict[phase]:
-                inputs.to(device)
-                labels0 = labels[0].to(device)
+                inputs, labels0 = inputs.to(device), labels[0].to(device)              
                 optimizer.zero_grad()   # optimizerを初期化
 
                 # 順伝搬（forward）計算
@@ -39,7 +37,6 @@ def train_model(net:torch.nn.Module=None,
                         loss.backward()
                         optimizer.step()
 
-                    
                     epoch_loss += loss.item() * inputs.size(0)          # 損失値合計を更新
                     epoch_corrects += torch.sum(preds == labels0.data)  # 正解数合計を更新
 

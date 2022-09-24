@@ -53,8 +53,10 @@ def get_text_img(
 
     if x0 == 0:  # 描画する文字列の左端を計算
         x0 = (width >> 1) - (bbox_width >> 1)
+        x0 = x0 if x0 > 0 else 1
     if y0 == 0:  # 描画する文字列の上端を計算 
         y0 = (height >> 1) - (bbox_height >> 1)
+        y0 = y0 if y0 > 0 else 1
     
     draw_canvas.text(xy=(x0, y0),   # 実際の描画
                      text=text,
@@ -66,16 +68,16 @@ def get_text_img(
                      anchor=anchor,
                      fill=color)
     
-    if draw_bbox:
-        bbox = draw_canvas.textbbox(xy=(x0,y0),
-                                    font=font, 
-                                    text=text,
-                                    anchor=anchor)
+    bbox = draw_canvas.textbbox(xy=(x0,y0),
+                                font=font, 
+                                text=text,
+                                anchor=anchor)
 
+    if draw_bbox:
         draw_canvas.rectangle(bbox,
                               outline=bbox_color,
                               fill=None,
                               width=2)
-        return img, draw_canvas, bbox
-    else:
-        return img, draw_canvas
+    return img, draw_canvas, bbox
+    #else:
+    #    return img, draw_canvas

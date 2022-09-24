@@ -11,6 +11,7 @@ import torch
 from torch.utils.data import Dataset
 from torchvision import transforms
 
+from .pil_get_text_img import get_text_img
 
 default_bgcolor = (255,255,255)           # 真っ白な背景
 default_width, default_height = 224, 224  # 画像の縦横の大きさ
@@ -19,7 +20,7 @@ default_fontsize = 28                     # フォントサイズ
 
 def get_notojp_fonts(
     notofonts_dir:str='fonts',  # Noto フォントデータを保存するディレクトリ名
-    fontsize:int=28,            # デフォルトフォントサイズ
+    fontsize:int=default_fontsize,            # デフォルトフォントサイズ
     verbose=True,
     )->dict:
 
@@ -143,10 +144,11 @@ class notojp_dataset(Dataset):
 
 
 def get_notoen_fonts(
-    font_dir:str = 'bit/', # os.path.join(HOME, 'Downloads'),
+    font_dir:str='bit/',   # os.path.join(HOME, 'Downloads'),
     font_zipfiles:list=['Noto_Serif.zip', 'Noto_Sans.zip'],
+    fontsize:int=default_fontsize,
     verbose=True):
-                     
+
     fonts = {}
     for font_zipfile in font_zipfiles:
         file_path = os.path.join(os.path.join(font_dir, font_zipfile))
@@ -154,16 +156,16 @@ def get_notoen_fonts(
             with zipfile.ZipFile(file_path, 'r') as zip_fp_:
                 for i, x in enumerate(zip_fp_.infolist()):
                     if 'ttf' in x.filename:
-                        fonts[x.filename.split('.')[0]] = ImageFont.truetype(zip_fp.open(x.filename), size=16)
- 
+                        fonts[x.filename.split('.')[0]] = ImageFont.truetype(zip_fp.open(x.filename), size=fontsize)
+
     notofonts = fonts
     if verbose:
         print('\n読み込んだ Noto fonts の情報')
         for i, (k, v) in enumerate(sorted(notofonts.items())):
             print(f'{i:2d}',
                   colored(f'{k}', "blue", attrs=['bold']), f' {v}')
-                        
-                        
+
+
     return fonts
 
 import torch
@@ -192,25 +194,35 @@ class notoen_dataset(Dataset):
         self.width = width
         self.heigh = height
 
+        
         x0 = (width >> 1) - (fontsize >> 1) # - 4
         y0 = (height >> 1) - (fontsize >> 1) - 10
         imgs, labels = [], []
         for itm in items:
             for font in fonts_dict.keys():
-                img = Image.new(mode='RGB',
-                                size=(width, height),
-                                color=bgcolor)
-                draw_canvas = ImageDraw.Draw(img)
-                draw_canvas.text(
-                    xy=(x0, y0),
+                img, draw_canvas, bbox =  get_text_img(
                     text=itm,
-                    font=fonts_dict[font], # ['data'],
-                    stroke_width=1,
-                    #stroke_fill="black",
-                    #spacing=-4,
-                    #fill=(0,0,0),
-                    fill=color,
-                )
+                    width=width,
+                    height=height,
+                    #x0=x0,
+                    #y0=y0,
+                    font=fonts_dict[font],
+                    fontsize=fontsize)
+                             
+                # img = Image.new(mode='RGB',
+                #                 size=(width, height),
+                #                 color=bgcolor)
+                # draw_canvas = ImageDraw.Draw(img)
+                # draw_canvas.text(
+                #     xy=(x0, y0),
+                #     text=itm,
+                #     font=fonts_dict[font], # ['data'],
+                #     stroke_width=1,
+                #     #stroke_fill="black",
+                #     #spacing=-4,
+                #     #fill=(0,0,0),
+                #     fill=color,
+                # )
                 imgs.append(np.array(img))
                 labels.append((items.index(itm),itm))
                 #imgs.append(torch.Tensor(np.array(img).transpose(2,0,1)))

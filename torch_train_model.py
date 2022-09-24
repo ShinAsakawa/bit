@@ -26,7 +26,7 @@ def train_model(net:torch.nn.Module=None,
             # データローダーからミニバッチを取り出すループ
             for inputs, labels in tqdm(dataloaders_dict[phase]):
             #for inputs, labels in dataloaders_dict[phase]:
-                inputs.to(device)
+                inputs = inputs.to(device)
                 labels0 = labels[0].to(device)
                 optimizer.zero_grad()   # optimizerを初期化
 

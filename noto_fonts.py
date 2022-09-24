@@ -18,6 +18,7 @@ default_width, default_height = 224, 224  # 画像の縦横の大きさ
 default_fontsize = 28                     # フォントサイズ
 #default_fontsize = 56                     # フォントサイズ
 
+
 def get_notojp_fonts(
     notofonts_dir:str='fonts',  # Noto フォントデータを保存するディレクトリ名
     fontsize:int=default_fontsize,            # デフォルトフォントサイズ
@@ -71,7 +72,81 @@ def get_notojp_fonts(
 
     return notofonts
 
+digit_chars = '0123456789'
+alphabet_chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
 
+class notofonts_dataset_onmemory(Dataset):
+
+    def __init__(
+        self,
+        font_dict:dict=None,                                 # フォント辞書 上の `noto_fonts` を仮定
+        items:list=[c for c in digit_chars+alphabet_chars],  # 文字集合
+        color:[tuple or str] = 'black', # デフォルト前景色
+        bgcolor:tuple=default_bgcolor,  # デフォルト背景色
+        width:int=default_width,        # デフォルト刺激画面幅
+        height:int=default_height,      # デフォルト刺激画面高さ
+        fontsize:int=default_fontsize,  # デフォルトフォントサイズ
+        reps:int=1,                     # データの重複回数
+        stroke_width:int=0,             #
+        transform=None,
+        target_transform=None,
+    ):
+
+        super().__init__()
+        self.items = items
+        self.font_dict = font_dict
+        self.fontsize = fontsize
+        self.width = width
+        self.height = height
+        self.bgcolor = bgcolor
+        self.color = color
+        self.font_dict = font_dict
+        self.stroke_width = stroke_width
+
+        x0 = (width >> 1) - (fontsize >> 1) # - 4
+        y0 = (height >> 1) - (fontsize >> 1) - 10
+        imgs, labels = [], []
+        for itm in items:
+            for font in font_dict.keys():
+                imgs.append((itm,font))
+                labels.append((items.index(itm),itm))
+        self.imgs = imgs
+        self.labels = labels
+
+        # # RGB 各チャンネルの平均と分散の定義。CNN 唯一の前処理
+        # mean=[0.485, 0.456, 0.406]
+        # std=[0.229, 0.224, 0.225]
+        # self.normalize = transforms.Normalize(mean=mean, std=std)
+
+    def __len__(self):
+        return len(self.imgs)
+
+    def __getitem__(self, index):
+        #img = self.imgs[index]
+        itm, fontname = self.imgs[index]
+        img, draw_canvas, bbox =  get_text_img(
+            text=itm,
+            width=self.width,
+            height=self.height,
+            #x0=x0,
+            #y0=y0,
+            font=self.font_dict[fontname],
+            fontsize=self.fontsize,
+            stroke_width=self.stroke_width)
+
+        label = self.labels[index]
+        _img = torch.Tensor(np.array(img).transpose(2,0,1))
+        #_img = torch.Tensor(img.transpose(2,0,1))
+        #_img = self.normalize(_img)
+        return _img, label
+        #return torch.Tensor(img.transpose(2,0,1)), label
+
+    def __getoriginalitem__(self, index):
+        img = self.imgs[index]
+        label = self.labels[index]
+        return img, label
+
+    
 class notojp_dataset(Dataset):
 
     def __init__(
@@ -140,7 +215,6 @@ class notojp_dataset(Dataset):
         img = self.imgs[index]
         label = self.labels[index]
         return img, label
-
 
 
 def get_notoen_fonts(

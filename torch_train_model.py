@@ -1,5 +1,6 @@
-from tqdm.notebook import tqdm
 import torch
+from tqdm.notebook import tqdm
+from termcolor import colored
 
 def train_model(net:torch.nn.Module=None,
                 dataloaders_dict:dict=None,
@@ -19,12 +20,14 @@ def train_model(net:torch.nn.Module=None,
             else:
                 net.eval()   # モデルを検証モードに
 
-            epoch_loss = 0.0  # epochの損失和
+            epoch_loss = 0.0    # epochの損失和
             epoch_corrects = 0  # epochの正解数
 
             # データローダーからミニバッチを取り出すループ
             for inputs, labels in tqdm(dataloaders_dict[phase]):
-                inputs, labels0 = inputs.to(device), labels[0].to(device)              
+            #for inputs, labels in dataloaders_dict[phase]:
+                inputs.to(device)
+                labels0 = labels[0].to(device)
                 optimizer.zero_grad()   # optimizerを初期化
 
                 # 順伝搬（forward）計算
@@ -37,13 +40,21 @@ def train_model(net:torch.nn.Module=None,
                         loss.backward()
                         optimizer.step()
 
+                    
                     epoch_loss += loss.item() * inputs.size(0)          # 損失値合計を更新
                     epoch_corrects += torch.sum(preds == labels0.data)  # 正解数合計を更新
 
             # エポック毎の損失値と正解率を表示
             epoch_loss = epoch_loss / len(dataloaders_dict[phase].dataset)
             epoch_acc = epoch_corrects.double() / len(dataloaders_dict[phase].dataset)
-            print(f'{phase} 損失値:{epoch_loss:.3f} 精度:{epoch_acc:.3f}')
+            color='green' if phase == 'val' else 'cyan'
+            phase_jp = '検証データ' if phase == 'val' else '訓練データ'
+            print(colored(f'{phase_jp}',color=color, attrs=['bold']),
+                  '損失値:',
+                  colored(f'{epoch_loss:.3f}',color=color, attrs=['bold']),
+                  '精度:',
+                  colored(f'{epoch_acc:.3f}',color=color, attrs=['bold']))
+            #print(f'{phase} 損失値:{epoch_loss:.3f} 精度:{epoch_acc:.3f}')
             losses[phase].append(epoch_loss)
     return losses
     

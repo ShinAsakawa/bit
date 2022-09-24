@@ -1,6 +1,5 @@
 import PIL
 from PIL import Image, ImageDraw, ImageFont
-#from . import fonts_en
 
 default_width=224
 default_height=224
@@ -16,11 +15,12 @@ def get_text_img(
     bgcolor:tuple=default_bgcolor,            # デフォルト背景色
     color:[tuple or str] = 'black',           # デフォルト前景色
     fontsize:int=default_fontsize,            # デフォルトフォントサイズ
+    stroke_width:int=0,                       # 
     anchor:str='lt',                          # デフォルトアンカー 'lt' は左上の意
     draw_bbox:bool=False,                     # bbox を描画するか否か
     bbox_color:str='cyan',                    # bbox を描画する色
     bbox_width:int=2,                         # bbox を描画する線幅
-    font:PIL.ImageFont.FreeTypeFont=None,     # fonts_en['NotoSans-Regular'],  # フォント
+    font:PIL.ImageFont.FreeTypeFont=None,     #fonts_en['NotoSans-Regular'],  # フォント
     target_transform=None):
     """引数 text で指定された 1 行の文字列を描画し，その PIL.Image.Image と PIL.ImageDraw.ImageDraw
     を返す。
@@ -61,7 +61,7 @@ def get_text_img(
     draw_canvas.text(xy=(x0, y0),   # 実際の描画
                      text=text,
                      font=font,
-                     stroke_width=1,
+                     stroke_width=stroke_width,
                      #stroke_fill="black",
                      #spacing=-4,
                      #fill=(0,0,0),

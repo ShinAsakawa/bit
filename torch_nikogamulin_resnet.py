@@ -180,44 +180,50 @@ class ResNet(nn.Module):
 
 
 def ResNet18(img_channels=3,
-             num_classes=1000):
+             num_classes=1000,
+             device='cuda' if torch.cuda.is_available() else "cpu"):
     return ResNet(num_layers=18,
                   block=Block,
                   image_channels=img_channels,
                   num_classes=num_classes,
-                  device='cuda' if torch.cuda.is_available() else "cpu")
+                  device=device)
 
 def ResNet34(img_channels=3,
-             num_classes=1000):
+             num_classes=1000,
+             device='cuda' if torch.cuda.is_available() else "cpu"):
     return ResNet(num_layers=34,
                   block=Block,
                   image_channels=img_channels,
                   num_classes=num_classes,
-                  device='cuda' if torch.cuda.is_available() else "cpu")
+                  device=device)
 
 
 def ResNet50(img_channels=3,
-             num_classes=1000):
+             num_classes=1000,
+             device='cuda' if torch.cuda.is_available() else "cpu"):
     return ResNet(num_layers=50,
                   block=Block,
                   image_channels=img_channels,
                   num_classes=num_classes,
-                  device='cuda' if torch.cuda.is_available() else "cpu")
+                  device=device)
 
-def ResNet101(img_channels=3, num_classes=1000):
+def ResNet101(img_channels=3, 
+              num_classes=1000,
+              device='cuda' if torch.cuda.is_available() else "cpu"):
     return ResNet(num_layers=101,
                   bloc=Block,
                   image_channels=img_channels,
                   num_classes=num_classes,
-                  device='cuda' if torch.cuda.is_available() else "cpu")
+                  device=device)
 
-
-def ResNet152(img_channels=3, num_classes=1000):
+def ResNet152(img_channels=3, 
+              num_classes=1000,
+              device='cuda' if torch.cuda.is_available() else "cpu"):
     return ResNet(num_layers=152,
                   block=Block,
                   img_channels=img_channels,
                   num_classes=num_classes,
-                  device='cuda' if torch.cuda.is_available() else "cpu")
+                  device=device)
 
 # def test():
 #     net = ResNet18(img_channels=3, num_classes=1000)

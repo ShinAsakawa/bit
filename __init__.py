@@ -24,6 +24,7 @@ fonts_ja = get_notojp_fonts(verbose=False)
 from .noto_fonts import notoen_dataset
 from .noto_fonts import get_notoen_fonts
 from .noto_fonts import notojp_dataset
+from .noto_fonts import notofonts_dataset_onmemory
 from .noto_fonts import get_notojp_fonts
 from .torch_train_model import train_model
 from .torch_MLP_Imagenet import MLP_Imagenet

@@ -1,6 +1,6 @@
 import PIL
 from PIL import Image, ImageDraw, ImageFont
-from . import fonts_en
+#from . import fonts_en
 
 default_width=224
 default_height=224
@@ -20,7 +20,7 @@ def get_text_img(
     draw_bbox:bool=False,                     # bbox を描画するか否か
     bbox_color:str='cyan',                    # bbox を描画する色
     bbox_width:int=2,                         # bbox を描画する線幅
-    font:PIL.ImageFont.FreeTypeFont=fonts_en['NotoSans-Regular'],  # フォント
+    font:PIL.ImageFont.FreeTypeFont=None,     # fonts_en['NotoSans-Regular'],  # フォント
     target_transform=None):
     """引数 text で指定された 1 行の文字列を描画し，その PIL.Image.Image と PIL.ImageDraw.ImageDraw
     を返す。

@@ -5,7 +5,7 @@ BIT は 1987 年に Barbara Wilson, Janet Cockburn and Peter Halligan によっ�
 BIT 4 tasks のうち，line_bisection, letter_cancellation についての実装を試みた。
 line_cancellation と star_cancellation は未着手である。
 
-- 線分二等分テスト line bisection 
+- 線分二等分テスト line bisection
 - 線分抹消テスト line cancellation
 - 文字抹消テスト letter cancellation
 - 星印抹消テスト star cancellation
@@ -30,30 +30,36 @@ line_cancellation と star_cancellation は未着手である。
 それぞれの患者には 8 インチの太さ 1 mmの黒い水平線が 3 本，階段状に表示されている。
 それぞれの線の範囲は，患者にはっきりと指摘され，患者は中心をマークするように指示される。
 
-<!-- * Line crossing: Patients are required to detect and cross out all target lines on a page. 
+<!-- * Line crossing: Patients are required to detect and cross out all target lines on a page.
 When administering the test, the examiner demonstrates the nature of the task to the patient by crossing out two of four lines located in a central column, and then instructing them to cross out all lines they can see on the page.
-* Letter Cancellation: Paper and pencil test in which patients are required to scan, locate, and cross out designated targets from a background of distractor letters. 
-The test consists of 5 rows of 34 upper case letters presented on a rectangular page. 
-Forty target stimuli are positioned such that each appears in equal number on both sides of the page. 
+* Letter Cancellation: Paper and pencil test in which patients are required to scan, locate, and cross out designated targets from a background of distractor letters.
+The test consists of 5 rows of 34 upper case letters presented on a rectangular page.
+Forty target stimuli are positioned such that each appears in equal number on both sides of the page.
 Each letter is 6 mm high and positioned 2 mm apart.
-* Star Cancellation: This test consists of a random array of verbal and non-verbal stimuli. 
-The stimuli are 52 large stars (14 mm), 13 randomly positioned letters and 19 short (3-4 letters) words are interspersed with 56 smaller stars (8mm) which comprise the target stimuli. 
+* Star Cancellation: This test consists of a random array of verbal and non-verbal stimuli.
+The stimuli are 52 large stars (14 mm), 13 randomly positioned letters and 19 short (3-4 letters) words are interspersed with 56 smaller stars (8mm) which comprise the target stimuli.
 The patient is instructed to cancel all the small stars.
-* Figure and Shape copying: In this test, the patient is required to copy three separate, simple drawings from the left side of the page. 
-The three drawings (a four pointed star, a cube, and a daisy) are arranged vertically and are clearly indicated to the patient. 
-* The second part of the test requires the patient to copy a group of three geometric shapes presented on a separate stimulus sheet. 
+* Figure and Shape copying: In this test, the patient is required to copy three separate, simple drawings from the left side of the page.
+The three drawings (a four pointed star, a cube, and a daisy) are arranged vertically and are clearly indicated to the patient.
+* The second part of the test requires the patient to copy a group of three geometric shapes presented on a separate stimulus sheet.
 Unlike the previous items, the contents of the page are not pointed out to the patient.
-* Line Bisection: Patients are required to estimate and indicate the midpoint of a horizontal line. 
-The expectation is that the patient with left neglect will choose a midpoint to the right of true center. 
-Each patient is presented with three horizontal, 8-inch black lines, 1- mm thick, displayed in a staircase fashion across the page. 
+* Line Bisection: Patients are required to estimate and indicate the midpoint of a horizontal line.
+The expectation is that the patient with left neglect will choose a midpoint to the right of true center.
+Each patient is presented with three horizontal, 8-inch black lines, 1- mm thick, displayed in a staircase fashion across the page.
 The extent of each line is clearly pointed out to the patient who is then instructed to mark the center.
 -->
- 
+
 #### 文献
 
 - Halligan, P., Cockburn, J., Wilson, B. (1991). The Behavioural Assessment of Visual Neglect. Neuropsychological Rehabilitation 1, 5-32.
 - 石合純夫代表 日本版差規制委員会 (1999) BIT 行動性無視検査日本版，新興医学出版社，東京
 """
+
+# 最初に torch 関係を import しないと M1 Mac ではエラーになる 2022_0629 現在
+import torch
+import torchvision
+from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
+from torchvision.models.detection import fasterrcnn_resnet50_fpn
 
 import os
 import sys
@@ -65,7 +71,23 @@ from PIL import ImageDraw
 from PIL import ImageFont
 import matplotlib.pyplot as plt
 
-import torch
+
+def get_object_detection_model(num_classes):
+
+    # MS-COCO で事前に学習させたモデルを読み込み
+    model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
+    #model = torchvision.models.mobilenet_v2(pretrained=True)
+
+    # 分類器の入力特徴数の取得
+    in_features = model.roi_heads.box_predictor.cls_score.in_features
+    print(f'変換前 model.roi_heads:{model.roi_heads}')
+
+    # 事前学習済頭部を新しいものに置き換え
+    model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
+    print(f'変換後 model.roi_heads:{model.roi_heads}')
+
+    return model
+
 
 # Noto Truetype font の読み込み
 # Download NotoSerif and NotoSans fonts from https://fonts.google.com/download?family=Noto%20Serif%20JP
@@ -77,19 +99,15 @@ if isColab:
     # !wget https://noto-website-2.storage.googleapis.com/pkgs/NotoSerifJP.zip
     # !wget https://noto-website-2.storage.googleapis.com/pkgs/NotoSansJP.zip
     # !unzip NotoSerifJP.zip -d Noto_JP_fonts
-    # !unzip -o NotoSansJP.zip -d Noto_JP_fonts  # `-o` means overwrite 
+    # !unzip -o NotoSansJP.zip -d Noto_JP_fonts  # `-o` means overwrite
     # !mv Noto_JP_fonts bit
 
     noto_font_dir = 'bit/Noto_JP_fonts'
     bit_image_dir = 'bit/2022muto_figures'
 else:
     import os
-    import platform
-    HOSTNAME = platform.node().split('.')[0]
-    if HOSTNAME == 'Sinope':
-        HOME = '/Users/_asakawa'
-    else:
-        HOME = '/Users/asakawa'
+    #import platform
+    HOME = os.environ['HOME']
     noto_font_dir = os.path.join(HOME, 'study/data/Noto_JP_fonts/')
     bit_image_dir = os.path.join(HOME, '/Users/_asakawa/study/2022muto/figures')
 notofonts_fnames = glob(os.path.join(noto_font_dir,'*otf'))
@@ -124,54 +142,53 @@ class BIT():
         それぞれの患者には 8 インチの太さ 1 mmの黒い水平線が 3 本，階段状に表示されている。
         それぞれの線の範囲は，患者にはっきりと指摘され，患者は中心をマークするように指示される。
 
-    * Line crossing: Patients are required to detect and cross out all target lines on a page. 
+    * Line crossing: Patients are required to detect and cross out all target lines on a page.
         When administering the test, the examiner demonstrates the nature of the task to the patient by crossing out two of four lines located in a central column, and then instructing them to cross out all lines they can see on the page.
-    * Letter Cancellation: Paper and pencil test in which patients are required to scan, locate, and cross out designated targets from a background of distractor letters. 
-        The test consists of 5 rows of 34 upper case letters presented on a rectangular page. 
-        Forty target stimuli are positioned such that each appears in equal number on both sides of the page. 
+    * Letter Cancellation: Paper and pencil test in which patients are required to scan, locate, and cross out designated targets from a background of distractor letters.
+        The test consists of 5 rows of 34 upper case letters presented on a rectangular page.
+        Forty target stimuli are positioned such that each appears in equal number on both sides of the page.
         Each letter is 6 mm high and positioned 2 mm apart.
-    * Star Cancellation: This test consists of a random array of verbal and non-verbal stimuli. 
-        The stimuli are 52 large stars (14 mm), 13 randomly positioned letters and 19 short (3-4 letters) words are interspersed with 56 smaller stars (8mm) which comprise the target stimuli. 
+    * Star Cancellation: This test consists of a random array of verbal and non-verbal stimuli.
+        The stimuli are 52 large stars (14 mm), 13 randomly positioned letters and 19 short (3-4 letters) words are interspersed with 56 smaller stars (8mm) which comprise the target stimuli.
         The patient is instructed to cancel all the small stars.
-    * Line Bisection: Patients are required to estimate and indicate the midpoint of a horizontal line. 
-        The expectation is that the patient with left neglect will choose a midpoint to the right of true center. 
-        Each patient is presented with three horizontal, 8-inch black lines, 1- mm thick, displayed in a staircase fashion across the page. 
+    * Line Bisection: Patients are required to estimate and indicate the midpoint of a horizontal line.
+        The expectation is that the patient with left neglect will choose a midpoint to the right of true center.
+        Each patient is presented with three horizontal, 8-inch black lines, 1- mm thick, displayed in a staircase fashion across the page.
         The extent of each line is clearly pointed out to the patient who is then instructed to mark the center.
-        
-    note: 
+
+    note:
     コード中 width:int=4662, height:int=3289, などの数値は武藤先生から送っていただいた図版のサイズの最小値
-        
+
     Functions:
     - show_original_image(task): 各課題のスキャンした画像を表示する
-        
+
     - draw_a_bisecition_line():
-        
+
     - draw_a_bisection_line():
-        
+
     - make_line_bisection_task_images():
-        
+
     - draw_bbox(): バウンディングボックスを描画する
-        
+
     - draw_text(): PIL.Image.Image データ内に文字データを書き込む
-        
+
     - make_a_letter_cancellation_image():
-        
+
     - make_letter_cancellation_task_images(N=10):
 
     '''
-    
+
     def __init__(self, fontdata=notofonts, fontsize=128):
-        
+
         self.fontdata = fontdata
         self.fontnames = [x for x in self.fontdata] # font 名のリスト
         self.default_font_name = 'NotoSansJP-Bold'                    # デフォルトフォントとする
         self.default_font = self.fontdata[self.default_font_name]['data'] # デフォルトフォント
         self.default_font_size = 128
-            
+
         #武藤先生から送っていただいた BIT 日本語版の図版のスキャンデータを読み込む
         #bit_image_dir = '/Users/asakawa/study/2022muto/figures'
-        bit_image_dir = 'bit/2022muto_figures'
-        #bit_image_dir = os.path.join(HOME, 'study/2022muto/figures')
+        bit_image_dir = os.path.join(HOME, 'study/2022muto/figures')
 
         bit_image_files = {'line_bisection': '20220124BIT_line_bisection.jpg',
                           'line_erasion': '20220124BIT_line_crossing.jpg',
@@ -185,7 +202,7 @@ class BIT():
             img = Image.open(os.path.join(bit_image_dir, fname)).convert('RGB')
             _tasks[task] = {'fname': fname, 'img': img}
         self.tasks = _tasks
-        
+
         self.max_width, self.max_height = 4662, 3289
         # 4 枚のスキャン画像の幅と高さの平均値を作成する刺激画像サイズとする
         #_width, _height = np.array(np.array([self.tasks[task]['img'].size for task in self.tasks]).mean(axis=0),dtype=int)
@@ -209,28 +226,28 @@ class BIT():
         self.COLORS = COLORS * 100
 
 
-         
-    def make_a_canvas(self, 
-                      width:int=None, 
+
+    def make_a_canvas(self,
+                      width:int=None,
                       height:int=None)->PIL.Image.Image:
         '''刺激を描くためのキャンバスを作成して返す'''
         width=self.max_width if width == None else width
         height=self.max_height if height == None else height
         print(f'width:{width}, height:{height}')
-        img = Image.new(mode='RGB', 
-                        size=(width, height), 
+        img = Image.new(mode='RGB',
+                        size=(width, height),
                         color=(255,255,255))  # 真っ白な (255,255,255) 画像
         draw = ImageDraw.Draw(img)  # draw オブジェクト ある種のキャンバスを生成
         return img, draw
-    
+
     def set_new_canvas(self,
-                      width:int=None, 
+                      width:int=None,
                       height:int=None)->None:
         self.canvas, self.draw = self.make_a_canvas()
         #return canvas, draw
 
 
-    def set_font(self, 
+    def set_font(self,
                  fontname='NotoSansJP-Bold',
                  fontsize:int=None)->None:
         '''フォントを設定する'''
@@ -245,15 +262,15 @@ class BIT():
         #print(f'self.fontdata[fontname]["data"]:{self.fontdata[fontname]["data"]}')
         self.default_font = self.fontdata[fontname]['data']
 
-        
-    def show_original_image(self, 
-                            task='line_bisection', 
-                            figsize=(8,6), 
+
+    def show_original_image(self,
+                            task='line_bisection',
+                            figsize=(8,6),
                             show_all=False):
         '''スキャンした図版の画像データを表示する'''
         if show_all:
             for task in self.tasks:
-                plt.figure(figsize=figsize)        
+                plt.figure(figsize=figsize)
                 img = self.tasks[task]['img']
                 plt.imshow(img)
                 plt.show()
@@ -285,16 +302,16 @@ class BIT():
 
 
     def draw_a_bisection_line(self,
-							  img:PIL.Image.Image=None,
-							  start_x:int=-1,
-							  start_y:int=-1,
-							  line_length:int=4000,
-							  line_width:int=-1,
-							  fg_color=None,
-							  width:int=4662, 
+                              img:PIL.Image.Image=None,
+                              start_x:int=-1,
+                              start_y:int=-1,
+                              line_length:int=4000,
+                              line_width:int=-1,
+                              fg_color=None,
+                              width:int=4662,
                               height:int=3289)->PIL.Image.Image:
         '''線分二等分課題の線分 1 本を PIL.Image.Image データに書き込む'''
-            
+
         if not isinstance(img, PIL.Image.Image):
             img = Image.new(mode='RGB', size=(width, height), color=(255,255,255))
         elif isinstance(img, np.ndarray):
@@ -306,7 +323,7 @@ class BIT():
         draw = ImageDraw.Draw(img)         # draw キャンバスを生成
 
         x_offs = int(_width * 0.10)
-        y_offs = int(_height * 0.10)        
+        y_offs = int(_height * 0.10)
 
         _start_x = x_offs                  # x 座標の開始点
         _start_y = y_offs                  # y 座標縦方向の開始点 左上が (0,0) であることに注意
@@ -329,7 +346,7 @@ class BIT():
         # バウンディングボックス
         dx, dy = 60, 60
         xmin = _start_x - dx
-        ymin = _start_y - dy - (_line_width>>1) 
+        ymin = _start_y - dy - (_line_width>>1)
         xmax = _start_x + _line_length + dx
         ymax = _start_y + (_line_width>>1) + dy
         bbox = [xmin,ymin,xmax,ymax]
@@ -339,7 +356,7 @@ class BIT():
     def pm_randint(self, _range:int)->int:
         """ プラスマイナス _range 幅の乱数を返す"""
         return np.random.randint(_range) - (_range >>1)
-    
+
     def draw_bisection_lines(self,
                              img:PIL.Image.Image=None,
                              n_lines=3,
@@ -361,7 +378,7 @@ class BIT():
         _start_y = _start_y_offs + _line_offs # np.random.randint(line_offs >> 1)
 
 
-        bboxes = []       
+        bboxes = []
         for _ in range(n_lines):
             img, bbox = self.draw_a_bisection_line(start_y=_start_y, img=img)
             _start_y = bbox[-1]  # bbox の最後の要素は，y 座標の最下点なので，そこを y の始点とする
@@ -372,14 +389,14 @@ class BIT():
             _start_y += _y_offs # + (height >> 4)
             #_start_y += _min_step_y + _y_offs # + (height >> 4)
             bboxes.append(bbox)
-            
+
         return img, bboxes
 
 
-    def make_line_bisection_task_images(self, 
-                                        N=10, 
+    def make_line_bisection_task_images(self,
+                                        N=10,
                                         n_lines=0,
-                                        min_n_lines=3, 
+                                        min_n_lines=3,
                                         max_n_lines=7):
         '''線分二等分課題のための訓練データ画像を N 枚作成する'''
         images, bboxes = [], []
@@ -387,22 +404,22 @@ class BIT():
             img = self.tasks['line_bisection']['img']
             if n_lines == 0:
                 n_lines = np.random.randint(min_n_lines, max_n_lines)
-            _img, _bbox = self.draw_bisection_lines(n_lines=n_lines)    
+            _img, _bbox = self.draw_bisection_lines(n_lines=n_lines)
             images.append(_img)
             bboxes.append(_bbox)
             #images.append(self.draw_bisection_lines(n_lines=n_lines))
-            
+
         return images, bboxes
-    
-    
+
+
     def draw_bbox(self,
-                  fontname:str='NotoSansJP-Bold', 
+                  fontname:str='NotoSansJP-Bold',
                   fontsize:int= 128,
                   img:PIL.Image.Image=None,
-                  x:int = -1, y:int = -1, 
-                  fg_color:str='black', 
+                  x:int = -1, y:int = -1,
+                  fg_color:str='black',
                   bg_color:str='white',
-                  width:int=4662, 
+                  width:int=4662,
                   height:int=3289,
                  )->PIL.Image.Image:
         if not isinstance(img, PIL.Image.Image):
@@ -414,7 +431,7 @@ class BIT():
         width, height = img.size
         draw = ImageDraw.Draw(img)
         self.font = ImageFont.truetype(fontname, fontsize)
-        
+
         top, bottom = int( 0.25 * height), int(0.70 * height)
         left, right = int(0.05 * width), int(0.95 * width)
         center_x, center_y = width // 2, height // 2
@@ -424,7 +441,7 @@ class BIT():
         #draw.text((x0, y0), text=text, fill=fg_color, font=font)
         draw.rectangle((left,top,right,bottom),fill=None, outline=fg_color, width=40)
         return img
-    
+
 
     def write_text_on_self_canvas(self,
                                   text:str='はー',
@@ -441,7 +458,7 @@ class BIT():
         if fg_color == 'rand':
             fg_color = np.random.choice(self.colornames)
 
-        # fontname に従ってフォントを指定する 
+        # fontname に従ってフォントを指定する
         __font = ImageFont.truetype(self.fontdata[fontname]['fname'], size=fontsize)
 
         # 描画位置が指定されていなければ，ど真ん中に設定する
@@ -463,19 +480,19 @@ class BIT():
         if bbox:
             self.draw.rectangle(xy=size, fill=None, outline=fg_color, width=15)
 
-        
+
     def draw_text(self,
                   text:str='おはよう',
-                  fontname:str='NotoSansJP-Bold', 
+                  fontname:str='NotoSansJP-Bold',
                   fontsize:int= 128,
                   img:PIL.Image.Image=None,
-                  x:int = -1, y:int = -1, 
-                  fg_color:str='black', 
+                  x:int = -1, y:int = -1,
+                  fg_color:str='black',
                   bg_color:str='white',
-                  width:int=4662, 
+                  width:int=4662,
                   height:int=3289,
                   bbox=False)->PIL.Image.Image:
-        
+
         if not isinstance(img, PIL.Image.Image):
             img = Image.new('RGB', (width, height), (255,255,255))
         elif isinstance(img, np.ndarray):
@@ -499,7 +516,7 @@ class BIT():
 
         # #self.set_font(fontname)
         # #self.font = ImageFont.truetype(self.fontdata[fontname]['fname'], fontsize)
-        
+
         top, bottom = int(0.25 * height), int(0.70 * height)
         left, right = int(0.05 * width),  int(0.95 * width)
         center_x, center_y = width // 2, height // 2
@@ -508,7 +525,7 @@ class BIT():
         x0 = x if x != -1 else width // 2
         y0 = y if y != -1 else height // 2
 
-        # fontname に従ってフォントを指定する 
+        # fontname に従ってフォントを指定する
         __font = ImageFont.truetype(self.fontdata[fontname]['fname'], size=fontsize)
 
         # 実際の `text` 内容を描画
@@ -520,20 +537,20 @@ class BIT():
             draw.rectangle(xy=size,fill=None, outline=fg_color, width=15)
         return img
 
-    
+
     def make_a_letter_cancellation_image(self,
                                          img:PIL.Image.Image=None,
-                                         fontname:str='NotoSansJP-Bold', 
+                                         fontname:str='NotoSansJP-Bold',
                                          chars_per_line=34,
                                          fontsize:int=128,
                                          n_lines=5,
-                                         width:int=4662, 
+                                         width:int=4662,
                                          height:int=3289,
                                          fg_color:str='black',
                                         )->PIL.Image.Image:
         '''文字抹消課題の画像データを一枚作成'''
 
-        # 引数 img が指定されていなければ，新しい img 実体を作成        
+        # 引数 img が指定されていなければ，新しい img 実体を作成
         if not isinstance(img, PIL.Image.Image):
             img = Image.new('RGB', (width, height), (255,255,255))
         elif isinstance(img, np.ndarray):
@@ -566,18 +583,18 @@ class BIT():
 
 
         self.hira_select()
-        target_chars = self.target_hira_chars 
+        target_chars = self.target_hira_chars
 
         target_line_x = center_x - target_offset
         x = center_x - target_offset
         y = bottom_y
-        ret = self.draw_text(text=target_chars[0], x=x, y=y, 
+        ret = self.draw_text(text=target_chars[0], x=x, y=y,
                              fg_color=fg_color, img=img, fontname=fontname)
 
         x += target_offset * 2
         y = bottom_y
-        ret = self.draw_text(text=target_chars[1],x=x, y=y, 
-                             fg_color='red', 
+        ret = self.draw_text(text=target_chars[1],x=x, y=y,
+                             fg_color='red',
                              img=ret, fontname=fontname) # , font=self.default_font, fontsize=self.default_font_size)
 
 
@@ -590,11 +607,11 @@ class BIT():
         x0, y0 = line_start_x, line_start_y
         x, y = x0, y0
         for i in range(chars_per_line * n_lines):
-            ret = self.draw_text(text=self.hira_sample()[0], 
-                                 x=x, y=y, 
-                                 fontname=fontname, 
-                                 bbox=False, 
-                                 img=ret, 
+            ret = self.draw_text(text=self.hira_sample()[0],
+                                 x=x, y=y,
+                                 fontname=fontname,
+                                 bbox=False,
+                                 img=ret,
                                  fg_color=fg_color) # , font=font, fontsize=font_size)
             #ret = self.draw_text(text=self.hira_sample()[0], x=x, y=y, fontname=fontname, bbox=False, img=ret, fg_color='cyan') # , font=font, fontsize=font_size)
             x += font_offset
@@ -606,16 +623,16 @@ class BIT():
 
     def make_letter_cancellation_task_images(self, N=10):
         """文字抹消課題のための訓練データ画像を N 枚作成する"""
-        
+
         images = []
         for i in range(N):
             img = self.tasks['letter_eraseion']['img']
             images.append(self.make_a_letter_erasion_image())
-            
+
         return images
 
 
-    def hira_select(self, 
+    def hira_select(self,
                     n=2,
                     verbose=False):
         """ひらがな文字を選んで，ターゲットと妨害刺激として設定する"""
@@ -632,7 +649,7 @@ class BIT():
 
         if verbose:
             print(f'self.target_hira_chars:{self.target_hira_chars}')
-            print(f'self.distractors_hira_chars:{self.distractors_hira_chars}') 
+            print(f'self.distractors_hira_chars:{self.distractors_hira_chars}')
 
 
     @staticmethod
@@ -640,11 +657,11 @@ class BIT():
         s_hira = " ".join(ch for ch in 'あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん').split(' ')
         a = np.random.permutation(s_hira)
         return a[:n]
-            
+
 
 import PIL
 import matplotlib.patches as patches
-def plot_pilimg_and_bbox(pil_img:PIL.Image.Image, 
+def plot_pilimg_and_bbox(pil_img:PIL.Image.Image,
                          bboxes:list,
                          verbose:bool=False
                         ):
@@ -657,35 +674,48 @@ def plot_pilimg_and_bbox(pil_img:PIL.Image.Image,
         if verbose:
             print(f'xmin:{xmin}, ymin:{ymin}')
         ax.add_patch(plt.Rectangle((xmin, ymin), xmax - xmin, ymax - ymin,
-                                   fill=False, color=c, linewidth=2))    
+                                   fill=False, color=c, linewidth=2))
 
-def plot_img_bbox(img, target, title=None):
-    # 画像と bbox を描画     # plot the image and bboxes
-    # バウンディングボックスは以下のように定義されます: x-min y-min 幅 高さ
+def plot_img_bbox(
+    img:PIL.Image,
+    target:dict=None,
+    title:str=None,
+    size:tuple=(4,4),
+    ):
+    """画像と bbox を描画
+    バウンディングボックスは以下のように定義される: x-min y-min 幅 高さ"""
+
     fig, ax = plt.subplots(1,1)
-    fig.set_size_inches(7,7)
+    fig.set_size_inches(size)
+    #fig.set_size_inches(4,4)
+    #fig.set_size_inches(7,7)
     ax.imshow(img)
-    #print(target)
-    
+
     for box in target['boxes']:
         x, y, width, height  = box[0], box[1], box[2]-box[0], box[3]-box[1]
         rect = patches.Rectangle((x, y),
                                  width, height,
-                                 linewidth = 4,
+                                 linewidth = 2,
                                  edgecolor = 'red',
                                  facecolor = 'none')
 
         ax.add_patch(rect)  # 画像上にバウンディングボックスを描画
-        
+
     if title != None:
         ax.set_title(title)
     plt.show()
-    
+
+
+def torch_to_pil(img:torch.Tensor)->PIL.Image.Image:
+    """torchtensor を PIL 画像に変換する関数
+    function to convert a torchtensor back to PIL image"""
+    return torchtvision.transform.ToPILImage()(img).convert('RGB')
+
 
 def get_transform():
     return A.Compose([
         # ToTensorV2 converts image to pytorch tensor without div by 255
-        ToTensorV2(p=1.0) 
+        ToTensorV2(p=1.0)
         ], bbox_params={'format': 'pascal_voc', 'label_fields': ['labels']})
 
 
@@ -705,7 +735,7 @@ class BIT_LineBisection(torch.utils.data.Dataset):
             print('Error')
         else:
             self.symbols = _symbols
-        
+
         self.transforms = transforms
         self.dirname = dirname
         self.data_fnames = sorted(glob.glob(os.path.join(dirname,'*.png')))
@@ -719,7 +749,7 @@ class BIT_LineBisection(torch.utils.data.Dataset):
         self.height_f = 224 / muto_height
         self.width_f =  224 / muto_width
         #self.height_f *= int(muto_height / muto_width)
-        
+
         # 境界領域ボックス (左,上,右,下) 4 点からなるデータを `bboxes.txt` から読み込む
         bboxes_fname = os.path.join(self.dirname, 'bboxes.txt')
         with open(bboxes_fname, 'r') as fp:
@@ -728,19 +758,19 @@ class BIT_LineBisection(torch.utils.data.Dataset):
         for i, line in enumerate(X):
             digs = np.array([int(d) for d in line.strip().replace('[','').replace(']','').split(',')])
             self.bboxes[i] = np.reshape(digs,((-1,4)))
-            
+
             for box in self.bboxes[i]:
                 box[0] *= self.width_f
                 box[1] *= self.height_f
                 box[2] *= self.width_f
                 box[3] *= self.height_f
-            
+
 
     def __getitem__(self, index):
         #img = plt.imread(self.data_fnames[index])
         #img = torch.Tensor(img).permute(2,0,1)
-        
-        # reading the images and converting them to correct size and color    
+
+        # reading the images and converting them to correct size and color
         img = cv2.imread(self.data_fnames[index])
         #img = cv2.imread(image_path)
         img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB).astype(np.float32)
@@ -749,66 +779,36 @@ class BIT_LineBisection(torch.utils.data.Dataset):
         img_res /= 255.0
         img = img_res
         img = torch.Tensor(img).permute(2,0,1)
-        
+
         # convert boxes into a torch.Tensor
         bboxes = torch.as_tensor(self.bboxes[index], dtype=torch.float32)
-        
+
         # getting the areas of the boxes
         area = (bboxes[:, 3] - bboxes[:, 1]) * (bboxes[:, 2] - bboxes[:, 0])
-        
+
          # suppose all instances are not crowd
         iscrowd = torch.zeros((bboxes.shape[0],), dtype=torch.int64)
-        
+
         labels = torch.as_tensor([self.symbols.index('<line>') for _ in range(self.bboxes[index].shape[0])], dtype=torch.int64)
-        #labels = torch.as_tensor([bit.symbols.index('<line>') for _ in range(self.bboxes[index].shape[0])], dtype=torch.int64)
-        #labels = torch.as_tensor([bit.symbols.index('<line>') for _ in range(train_dataset.bboxes[index].shape[0])], dtype=torch.int64)
 
         target = {}
         target["boxes"] = bboxes
-        #target["labels"] = labels.unsqueeze(0)
         target["labels"] = labels
         target["area"] = area
         target["iscrowd"] = iscrowd
 
         # image_id
         image_id = torch.tensor([index])
-        target["image_id"] = image_id        
-        
-        #transformed = self.transforms(image = img,
-        #                              bboxes = target['boxes'],
-        #                              labels = labels)
-        #img = transformed['image']
-        
-        return img, target
-        #return img, self.bboxes[index]
-        #return self.data_fnames[index], self.bboxes[index]
+        target["image_id"] = image_id
 
-        
+        return img, target
+
+
     def __len__(self):
         return self.n_data
 
 
-import torchvision
-from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
-from torchvision.models.detection import fasterrcnn_resnet50_fpn
-
-def get_object_detection_model(num_classes):
-
-    # MS-COCO で事前に学習させたモデルを読み込み
-    model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
-    #model = torchvision.models.mobilenet_v2(pretrained=True)
-    
-    # 分類器の入力特徴数の取得
-    in_features = model.roi_heads.box_predictor.cls_score.in_features
-    print(f'変換前 model.roi_heads:{model.roi_heads}')
-
-    # 事前学習済頭部を新しいものに置き換え
-    model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes) 
-    print(f'変換後 model.roi_heads:{model.roi_heads}')
-
-    return model
-
 
 if __name__ == "__main__":
-	bit = BIT()	
-	bit.show_original_image(show_all=True)
+    bit = BIT()
+    bit.show_original_image(show_all=True)

@@ -189,7 +189,7 @@ class BIT():
 
         #武藤先生から送っていただいた BIT 日本語版の図版のスキャンデータを読み込む
         #bit_image_dir = '/Users/asakawa/study/2022muto/figures'
-        bit_image_dir = os.path.join(HOME, 'study/2022muto/figures')
+        bit_image_dir = os.path.join(HOME, 'bit/2022muto_figures')
 
         bit_image_files = {'line_bisection': '20220124BIT_line_bisection.jpg',
                           'line_erasion': '20220124BIT_line_crossing.jpg',

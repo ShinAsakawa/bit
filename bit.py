@@ -94,6 +94,8 @@ def get_object_detection_model(num_classes):
 #_ = ImageFont.truetype(os.path.join('/Users/asakawa/study/data/Noto_JP_fonts','NotoSerifJP-Bold.otf'))
 from IPython import get_ipython
 isColab =  'google.colab' in str(get_ipython())
+HOME = os.environ['HOME']
+
 if isColab:
     # !mkdir Noto_JP_fonts
     # !wget https://noto-website-2.storage.googleapis.com/pkgs/NotoSerifJP.zip
@@ -107,7 +109,6 @@ if isColab:
 else:
     import os
     #import platform
-    HOME = os.environ['HOME']
     noto_font_dir = os.path.join(HOME, 'study/data/Noto_JP_fonts/')
     bit_image_dir = os.path.join(HOME, '/Users/_asakawa/study/2022muto/figures')
 notofonts_fnames = glob(os.path.join(noto_font_dir,'*otf'))
